@@ -1,0 +1,86 @@
+no.amshabat1, tzachiel
+Student Noam Shabat (206515579), Tzachi Elya (313223687)
+
+EX: 2
+
+FILES:
+uthreads.cpp -- The implementation of the thread library. the file is focused on managing user-level threads.
+thread.cpp -- The implementation of the thread class. includes definitions for creating, running, and
+terminating threads, as well as handling thread synchronization.
+thread.h -- The header file for the thread class
+README -- The file you are currently reading
+makefile -- A makefile for compiling the code. including compiling source files, linking object files, and
+cleaning the build environment.
+
+
+REMARKS:
+
+
+ANSWERS:
+Q1.A Sigsetjmp:
+	  int sigsetjmp(sigjmp_buf env, int savemask);
+	  a. This function saves the current environment of a thread including the stack pointer, program counter,
+	   and optionally the signal mask)
+	    * sigjmp_buf env: is a struct that contains the environment data where for later be use by siglongjmp,
+        returns 0 if we return immediately.
+	  b. If savemask is non-zero, it also saves the signal mask.
+
+     Siglongjmp:
+	  void siglongjmp(sigjmp_buf env, int val);
+	  a. This function receives an environment struct and an integer value, and restores the CPU state.
+	     It also jumps to the code location that was saved in env during the sigsetjmp.
+	  b. If the signal mask was also saved during the sigsetjmp invokation, it will restore them as well.
+
+Q1.B When sigsetjmp is called, it can optionally save the current signal mask (which signals are blocked).
+     If the savemask argument is non-zero, the current signal mask is saved. When siglongjmp is called
+     again, it restores the saved signal mask, thus reinstating the signal blocking state that was when
+     sigsetjmp was called in the beginning.
+
+Q2. An application that needs to switch between multiple threads often is better with user-level threads.
+    This is because switching between user-level threads is much faster than switching between kernel-level
+    threads. User-level threads are managed by a user-level thread library, which can perform context switches
+    without involving the operating system kernel. This reduces the overhead associated with context switching
+    and allows for faster thread management.
+
+Q3. Advantages:
+    - Isolation and Stability: Each tab runs in its own process, so if one tab crashes, it doesn’t affect the
+      others. This improves the overall stability of the browser.
+    - Security: Different processes can have different permissions, This enhances the security of the browser.
+    - Performance in Switching Tabs: Switching between tabs can be faster because each tab runs in a separate
+      process, avoiding the need to manage complex thread switch.
+    - Process Interrupts and Signal Masking: Each process can have its own interrupt handling and
+      signal masking, allowing for more control over behavior and management.
+
+    Disadvantages:
+    - Runs on a single processor and therefore can't utilize multi-threading of the CPU
+      If there are a lot of tabs open, the process queue can get loaded.
+      Many processes can be in a ready state. Each process has it's own data and therefore
+	  the memory usage is higher.
+    - Using multiple processes is slower because each needs to be initialized independently,
+      unlike threads, where they all share the same initialization.
+    - Higher Memory Usage: Each process has its own memory space, leading to higher memory usage compared to
+      threads, which share the same memory space.
+    - Resource Overhead: Creating and managing multiple processes involves more overhead than managing threads
+      within a single process. This includes the cost of context switch and OS management.
+    - Slower Initialization: Starting a new process is generally slower than starting a new thread.
+    - Inter-process Communication (IPC): Communication between processes is more complex and slower compared
+      to communication between threads within the same process.
+
+Q4. When executing "kill <pid>" command, the following happens:
+    - Multiple keyboard interrupts (hardware) happen, telling the OS which keys were pressed.
+    - When pressing "enter", the keyboard sends an interrupt (hardware) and the OS executes
+	  the written command.
+    - The OS sends a signal first type SIGTERM (Signal 15) where its a default signal that sent by the kill
+    command. It requests the process to be terminate gracefully and allowing it to clean up resources. and If
+    it fails, the second commend that's being send is the SIGKILL (Signal 9) commend, where it can forcefully
+    kill the process using kill -9 pid, which sends the SIGKILL signal. This signal cannot be caught or
+    ignored and forces the process to terminate immediately.
+
+Q5. Real time: the actual time that has passed in the real world since a program started running that is
+    being measured with a clock with a real time unit.
+    Virtual time: refers to the amount of time a process spends executing on the CPU in the context of a software.
+
+   Example:
+     A software that counting down from 10, with each decrement happening every 10 seconds.
+     - Real Time: 100 seconds (10 decrements x 10 seconds each).
+     - Virtual Time: 10 time units (one for each decrement in the software’s context).
