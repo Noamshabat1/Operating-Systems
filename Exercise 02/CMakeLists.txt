@@ -8,9 +8,4 @@ add_executable(Ex2_OS
         uthreads.cpp
         thread.h
         thread.cpp
-        test1.cpp
-#        test2.cpp
-#        test3.cpp
-#        test4.cpp
-#        test5.cpp
 )
