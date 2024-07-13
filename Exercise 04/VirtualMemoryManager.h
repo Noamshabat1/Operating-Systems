@@ -34,9 +34,9 @@ private:
 
     void resetFrame(word_t frame);
 
-    void removeAncestorLink(word_t frame, int depth, word_t targetFrame);
+    void removeParentLink(word_t frame, int depth, word_t targetFrame);
 
-    bool isLeaf(word_t frame, int depth, word_t targetFrame);
+    bool isitALeaf(word_t frame, int depth, word_t targetFrame);
 
     word_t getFrameByPage(word_t page);
 
