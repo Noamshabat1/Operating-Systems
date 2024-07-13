@@ -42,8 +42,7 @@ private:
 
     word_t findMaximalSeenFrame(word_t frame, unsigned int depth);
 
-    word_t findMaximalCyclicalDistance(word_t frame, unsigned int depth, const word_t ancestors[TABLES_DEPTH],
-                                       word_t pageSwappedIn, word_t p, word_t *bestP);
+    word_t findMaximalCyclicalDistance(word_t frame, unsigned int depth, const word_t ancestors[TABLES_DEPTH], word_t pageSwappedIn, word_t p, word_t *bestP);
 
     word_t readFrame(word_t addr, uint64_t offset);
 
@@ -51,8 +50,7 @@ private:
 
     void traverseTree(uint64_t virtualAddress, int depth, word_t &addr, word_t ancestors[TABLES_DEPTH]);
 
-    word_t handlePageFault(word_t prevAddr, uint64_t innerOffset, word_t current_page, int depth,
-                           word_t ancestors[TABLES_DEPTH]);
+    word_t handlePageFault(word_t prevAddr, uint64_t innerOffset, word_t current_page, int depth, word_t ancestors[TABLES_DEPTH]);
 };
 
 #endif // VIRTUALMEMORYMANAGER_H
