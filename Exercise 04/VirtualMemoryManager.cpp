@@ -51,8 +51,7 @@ word_t VirtualMemoryManager::manageMemory(uint64_t virtualAddress, int depth) {
     return addr;
 }
 
-void VirtualMemoryManager::traverseTree(uint64_t virtualAddress, int depth, word_t &addr,
-                                        word_t ancestors[TABLES_DEPTH]) {
+void VirtualMemoryManager::traverseTree(uint64_t virtualAddress, int depth, word_t &addr, word_t ancestors[TABLES_DEPTH]) {
     uint64_t current_page = virtualAddress >> OFFSET_WIDTH;
 
     for (int i = 0; i < depth; i++) {
@@ -69,9 +68,7 @@ void VirtualMemoryManager::traverseTree(uint64_t virtualAddress, int depth, word
     }
 }
 
-word_t
-VirtualMemoryManager::handlePageFault(word_t prevAddr, uint64_t innerOffset, word_t current_page, int depth,
-                                      word_t ancestors[TABLES_DEPTH]) {
+word_t VirtualMemoryManager::handlePageFault(word_t prevAddr, uint64_t innerOffset, word_t current_page, int depth, word_t ancestors[TABLES_DEPTH]) {
     word_t frame = findFrameToUse(current_page, ancestors);
 
     if (frame == -1) { return -1; }
@@ -85,7 +82,6 @@ VirtualMemoryManager::handlePageFault(word_t prevAddr, uint64_t innerOffset, wor
         PMrestore(frame, current_page);
         return frame;
     }
-
     return frame;
 }
 
@@ -98,8 +94,8 @@ word_t VirtualMemoryManager::findEmptyFrame(const word_t ancestors[TABLES_DEPTH]
             if (readFrame(frame, offset) == 0) zeros++;
         }
 
-        if (zeros == PAGE_SIZE && !isLeaf(0, 0, frame)) {
-            removeAncestorLink(0, 0, frame);
+        if (zeros == PAGE_SIZE && !isitALeaf(0, 0, frame)) {
+            removeParentLink(0, 0, frame);
             return frame;
         }
     }
@@ -113,8 +109,7 @@ word_t VirtualMemoryManager::findUnusedFrame() {
     } else { return -1; }
 }
 
-word_t VirtualMemoryManager::evictFrameWithMaxCyclicalDistance(word_t pageSwappedIn,
-                                                               const word_t ancestors[TABLES_DEPTH]) {
+word_t VirtualMemoryManager::evictFrameWithMaxCyclicalDistance(word_t pageSwappedIn, const word_t ancestors[TABLES_DEPTH]) {
     word_t bestP;
     findMaximalCyclicalDistance(0, 0, ancestors, pageSwappedIn, 0, &bestP);
     return bestP;
@@ -155,7 +150,7 @@ void VirtualMemoryManager::resetFrame(word_t frame) {
     }
 }
 
-void VirtualMemoryManager::removeAncestorLink(word_t frame, int depth, word_t targetFrame) {
+void VirtualMemoryManager::removeParentLink(word_t frame, int depth, word_t targetFrame) {
     if (depth >= TABLES_DEPTH) { return; }
 
     word_t value;
@@ -164,11 +159,11 @@ void VirtualMemoryManager::removeAncestorLink(word_t frame, int depth, word_t ta
         PMread(frame * PAGE_SIZE + offset, &value);
         if (value == targetFrame) {
             PMwrite(frame * PAGE_SIZE + offset, 0);
-        } else { removeAncestorLink(value, depth + 1, targetFrame); }
+        } else { removeParentLink(value, depth + 1, targetFrame); }
     }
 }
 
-bool VirtualMemoryManager::isLeaf(word_t frame, int depth, word_t targetFrame) {
+bool VirtualMemoryManager::isitALeaf(word_t frame, int depth, word_t targetFrame) {
     if (depth >= TABLES_DEPTH) return false;
 
     word_t value;
@@ -177,7 +172,7 @@ bool VirtualMemoryManager::isLeaf(word_t frame, int depth, word_t targetFrame) {
         if (value == 0) { continue; }
 
         if (value == targetFrame) return (depth == TABLES_DEPTH - 1);
-        if (isLeaf(value, depth + 1, targetFrame)) { return true; }
+        if (isitALeaf(value, depth + 1, targetFrame)) { return true; }
     }
     return false;
 }
@@ -207,9 +202,7 @@ word_t VirtualMemoryManager::findMaximalSeenFrame(word_t frame, unsigned int dep
     return maxValue;
 }
 
-word_t VirtualMemoryManager::findMaximalCyclicalDistance(word_t frame, unsigned int depth,
-                                                         const word_t ancestors[TABLES_DEPTH],
-                                                         word_t pageSwappedIn, word_t p, word_t *bestP) {
+word_t VirtualMemoryManager::findMaximalCyclicalDistance(word_t frame, unsigned int depth, const word_t ancestors[TABLES_DEPTH], word_t pageSwappedIn, word_t p, word_t *bestP) {
     if (depth >= TABLES_DEPTH) {
         if (isAncestor(getFrameByPage(p), ancestors)) { return 0; }
         *bestP = p;
@@ -226,8 +219,7 @@ word_t VirtualMemoryManager::findMaximalCyclicalDistance(word_t frame, unsigned 
 
         word_t newP = (p << OFFSET_WIDTH) | offset;
         word_t attemptedBestP;
-        value = findMaximalCyclicalDistance(value, depth + 1, ancestors, pageSwappedIn, newP,
-                                            &attemptedBestP);
+        value = findMaximalCyclicalDistance(value, depth + 1, ancestors, pageSwappedIn, newP, &attemptedBestP);
         if (value > maxValue) {
             maxValue = value;
             *bestP = attemptedBestP;
