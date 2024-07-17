@@ -1,17 +1,20 @@
+// -------------------------- Simple test constants ----------------------------- //
 #pragma once
 
 #include <climits>
 #include <stdint.h>
 
+// word
 typedef int word_t;
 
 #define WORD_WIDTH (sizeof(word_t) * CHAR_BIT)
 
-// number of bits in the offset
+// number of bits in the offset,
 #define OFFSET_WIDTH 4
 // page/frame size in words
 // in this implementation this is also the number of entries in a table
 #define PAGE_SIZE (1LL << OFFSET_WIDTH)
+
 
 // number of bits in a physical address
 #define PHYSICAL_ADDRESS_WIDTH 10
@@ -33,9 +36,14 @@ typedef int word_t;
 
 #define TABLES_DEPTH CEIL((((VIRTUAL_ADDRESS_WIDTH - OFFSET_WIDTH) / (double)OFFSET_WIDTH)))
 
-// ------------------------------------------------------- //
+// the weights for the evacuation algorithm
+#define WEIGHT_EVEN 4
+#define WEIGHT_ODD 2
 
-//// test constants 1:
+
+// -------------------------- test 1 constants ----------------------------- //
+
+
 //#pragma once
 //
 //#include <climits>
@@ -77,9 +85,10 @@ typedef int word_t;
 //#define WEIGHT_EVEN 4
 //#define WEIGHT_ODD 2
 
-// ------------------------------------------------------- //
 
-//// test constants 2:
+// -------------------------- test 2 constants ----------------------------- //
+
+
 //#pragma once
 //
 //#include <climits>
