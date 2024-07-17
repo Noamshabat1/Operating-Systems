@@ -30,7 +30,7 @@ private:
 
     word_t findFrameToUse(word_t pageSwappedIn, const word_t parents[TABLES_DEPTH]);
 
-    static bool didComeFromTheSamePath(word_t frame, const word_t parents[4]);
+    static bool didComeFromTheSamePath(word_t frame, const word_t parents[TABLES_DEPTH]);
 
     static void resetFrame(word_t frame);
 
@@ -49,7 +49,7 @@ private:
 
     static void writeFrame(word_t addr, uint64_t offset, word_t value);
 
-    void treeTraveling(uint64_t virtualAddress, int depth, word_t &addr, word_t parents[4]);
+    void treeTraveling(uint64_t virtualAddress, int depth, word_t &addr, word_t parents[TABLES_DEPTH]);
 
     word_t handlePageFault(word_t prevAddr, uint64_t innerOffset, word_t current_page, int depth,
                            word_t ancestors[TABLES_DEPTH]);
