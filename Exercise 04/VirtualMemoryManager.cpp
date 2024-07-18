@@ -70,7 +70,7 @@ word_t VirtualMemoryManager::manageMemory(uint64_t virtualAddress, int depth) {
     word_t parents[TABLES_DEPTH] = {0};
     word_t addr = 0;
 
-    treeTraveling(virtualAddress, depth, addr, parents);
+    traversePageTable(virtualAddress, depth, addr, parents);
 
     return addr;
 }
@@ -83,12 +83,12 @@ word_t VirtualMemoryManager::manageMemory(uint64_t virtualAddress, int depth) {
  * @param parents the parents of the frame
  */
 void VirtualMemoryManager::traversePageTable(uint64_t virtualAddress, int depth, word_t &addr,
-                                         word_t parents[TABLES_DEPTH]) {
+                                             word_t parents[TABLES_DEPTH]) {
     uint64_t currentPage = virtualAddress >> OFFSET_WIDTH;
 
     for (int i = 0; i < depth; ++i) {
         uint64_t pageIndex = virtualAddress >> (OFFSET_WIDTH * (depth - i));
-        uint64_t innerOffset = pageIndex & (PAGE_SIZE - 1);
+        uint64_t innerOffset = calculateInnerOffset(pageIndex);
 
         word_t parentAddr = addr;
         addr = readFrame(addr, innerOffset);
@@ -124,6 +124,32 @@ word_t VirtualMemoryManager::handlePageFault(word_t prevAddr, uint64_t innerOffs
         PMrestore(frame, current_page);
         return frame;
     }
+    return frame;
+}
+
+/**
+ * Find a frame to use in the virtual memory
+ * @param pageSwappedIn the page that was swapped in
+ * @param parents the ancestors of the frame
+ * @return the address of the frame
+ */
+word_t VirtualMemoryManager::findFrameToUse(word_t pageSwappedIn, const word_t parents[TABLES_DEPTH]) {
+    word_t frame;
+
+    frame = findEmptyFrame(parents);
+    if (frame != -1) { return frame; }
+
+    frame = findUnusedFrame();
+    if (frame != -1) { return frame; }
+
+    word_t page = evictFrameWithMaxCyclicalDistance(pageSwappedIn, parents);
+    frame = getFrameByPage(page);
+    PMevict(frame, page);
+
+    word_t addr = manageMemory(page, TABLES_DEPTH - 1);
+    uint64_t pageOffset = page & (PAGE_SIZE - 1);
+    writeFrame(addr, pageOffset, 0);
+
     return frame;
 }
 
@@ -173,107 +199,27 @@ word_t VirtualMemoryManager::evictFrameWithMaxCyclicalDistance(word_t pageSwappe
 }
 
 /**
- * Find a frame to use in the virtual memory
- * @param pageSwappedIn the page that was swapped in
- * @param parents the ancestors of the frame
+ * Get the frame by a given page
+ * @param page the page to get the frame for
  * @return the address of the frame
  */
-word_t VirtualMemoryManager::findFrameToUse(word_t pageSwappedIn, const word_t parents[TABLES_DEPTH]) {
-    word_t frame;
-
-    frame = findEmptyFrame(parents);
-    if (frame != -1) { return frame; }
-
-    frame = findUnusedFrame();
-    if (frame != -1) { return frame; }
-
-    word_t page = evictFrameWithMaxCyclicalDistance(pageSwappedIn, parents);
-    frame = getFrameByPage(page);
-    PMevict(frame, page);
-
-    word_t addr = manageMemory(page, TABLES_DEPTH - 1);
-    uint64_t pageOffset = page & (PAGE_SIZE - 1);
-    writeFrame(addr, pageOffset, 0);
-
-    return frame;
-}
-
-/**
- * Check if a frame came from the same path
- * @param frame the frame to check
- * @param parents the parents of the frame
- * @return true if the frame came from the same path, false otherwise
- */
-bool VirtualMemoryManager::didComeFromTheSamePath(word_t frame, const word_t parents[TABLES_DEPTH]) {
-    for (int i = 0; i < TABLES_DEPTH; ++i) {
-        if (frame == parents[i]) { return true; }
-    }
-    return false;
-}
-
-/**
- * Reset a frame in the virtual memory
- * @param frame the frame to reset
- */
-void VirtualMemoryManager::resetFrame(word_t frame) {
-    for (int i = 0; i < PAGE_SIZE; ++i) {
-        PMwrite(frame * PAGE_SIZE + i, 0);
-    }
-}
-
-/**
- * Remove a parent link from a frame
- * @param frame the frame to remove the parent link from
- * @param depth the depth of the tables
- * @param targetFrame the target frame to remove the parent link from
- */
-void VirtualMemoryManager::removeParentLink(word_t frame, int depth, word_t targetFrame) {
-    if (depth >= TABLES_DEPTH) { return; }
-
-    word_t value;
-
-    for (int offset = 0; offset < PAGE_SIZE; ++offset) {
-        PMread(frame * PAGE_SIZE + offset, &value);
-        if (value == targetFrame) { PMwrite(frame * PAGE_SIZE + offset, 0); }
-        else { removeParentLink(value, depth + 1, targetFrame); }
-    }
-}
-
-/**
- * Check if a frame is a leaf
- * @param frame the frame to check
- * @param depth the depth of the tables
- * @param targetFrame the target frame to check
- * @return true if the frame is a leaf, false otherwise
- */
-bool VirtualMemoryManager::isItALeaf(word_t frame, int depth, word_t targetFrame) {
-    if (depth >= TABLES_DEPTH) { return false; }
-
-    word_t value;
-    for (int offset = 0; offset < PAGE_SIZE; ++offset) {
-        PMread(frame * PAGE_SIZE + offset, &value);
-        if (value == 0) { continue; }
-
-        if (value == targetFrame) { return depth == TABLES_DEPTH - 1; }
-
-        if (isItALeaf(value, depth + 1, targetFrame)) { return true; }
-    }
-    return false;
-//    return depth == TABLES_DEPTH - 1;
-}
-
-/**
- * Get the frame by a page
- * @param page the page to get the frame by
- * @return the wanted frame.
- */
 word_t VirtualMemoryManager::getFrameByPage(word_t page) {
+    // Initialize the address at the root of the page table
     word_t addr = 0;
-    for (int i = 0; i < TABLES_DEPTH; ++i) {
-        uint64_t pageIndex = page >> (OFFSET_WIDTH * (TABLES_DEPTH - i - 1));
-        uint64_t innerOffset = pageIndex & (PAGE_SIZE - 1);
+
+    // Iterate through each level of the page table hierarchy
+    for (int level = 0; level < TABLES_DEPTH; ++level) {
+        // Calculate the index for the current level
+        uint64_t pageIndex = extractPageIndex(page, level);
+
+        // Calculate the offset within the page table entry
+        uint64_t innerOffset = calculateInnerOffset(pageIndex);
+
+        // Read the next address from the physical memory
         PMread(addr * PAGE_SIZE + innerOffset, &addr);
     }
+
+    // Return the final frame number
     return addr;
 }
 
@@ -358,4 +304,88 @@ word_t VirtualMemoryManager::readFrame(word_t addr, uint64_t offset) {
  */
 void VirtualMemoryManager::writeFrame(word_t addr, uint64_t offset, word_t value) {
     PMwrite(addr * PAGE_SIZE + offset, value);
+}
+
+/**
+ * Extract the index for the current level from the page number.
+ * @param page the page number.
+ * @param level the current level in the page table hierarchy.
+ * @return the index for the current level.
+ */
+uint64_t VirtualMemoryManager::extractPageIndex(word_t page, int level) {
+    int shiftAmount = OFFSET_WIDTH * (TABLES_DEPTH - level - 1);
+    return page >> shiftAmount;
+}
+
+/**
+ * Calculate the offset within the page table entry.
+ * @param pageIndex the page index for the current level.
+ * @return the inner offset within the page table entry.
+ */
+uint64_t VirtualMemoryManager::calculateInnerOffset(uint64_t pageIndex) {
+    return pageIndex & (PAGE_SIZE - 1);
+}
+
+/**
+ * Check if a frame came from the same path
+ * @param frame the frame to check
+ * @param parents the parents of the frame
+ * @return true if the frame came from the same path, false otherwise
+ */
+bool VirtualMemoryManager::didComeFromTheSamePath(word_t frame, const word_t parents[TABLES_DEPTH]) {
+    for (int i = 0; i < TABLES_DEPTH; ++i) {
+        if (frame == parents[i]) { return true; }
+    }
+    return false;
+}
+
+/**
+ * Reset a frame in the virtual memory
+ * @param frame the frame to reset
+ */
+void VirtualMemoryManager::resetFrame(word_t frame) {
+    for (int i = 0; i < PAGE_SIZE; ++i) {
+        PMwrite(frame * PAGE_SIZE + i, 0);
+    }
+}
+
+/**
+ * Remove a parent link from a frame
+ * @param frame the frame to remove the parent link from
+ * @param depth the depth of the tables
+ * @param targetFrame the target frame to remove the parent link from
+ */
+void VirtualMemoryManager::removeParentLink(word_t frame, int depth, word_t targetFrame) {
+    if (depth >= TABLES_DEPTH) { return; }
+
+    word_t value;
+
+    for (int offset = 0; offset < PAGE_SIZE; ++offset) {
+        PMread(frame * PAGE_SIZE + offset, &value);
+        if (value == targetFrame) { PMwrite(frame * PAGE_SIZE + offset, 0); }
+        else { removeParentLink(value, depth + 1, targetFrame); }
+    }
+}
+
+/**
+ * Check if a frame is a leaf
+ * @param frame the frame to check
+ * @param depth the depth of the tables
+ * @param targetFrame the target frame to check
+ * @return true if the frame is a leaf, false otherwise
+ */
+bool VirtualMemoryManager::isItALeaf(word_t frame, int depth, word_t targetFrame) {
+    if (depth >= TABLES_DEPTH) { return false; }
+
+    word_t value;
+    for (int offset = 0; offset < PAGE_SIZE; ++offset) {
+        PMread(frame * PAGE_SIZE + offset, &value);
+
+        if (value == 0) { continue; }
+
+        if (value == targetFrame) { return depth == TABLES_DEPTH - 1; }  // Found the target frame and check if it's a leaf
+
+        if (isItALeaf(value, depth + 1, targetFrame)) { return true; }
+    }
+    return false;
 }
