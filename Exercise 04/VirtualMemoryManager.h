@@ -36,7 +36,7 @@ private:
 
     static bool didComeFromTheSamePath(word_t frame, const word_t parents[TABLES_DEPTH]);
 
-    static void resetFrame(word_t frame);
+    static void clearFrame(word_t frame);
 
     void removeParentLink(word_t frame, int depth, word_t targetFrame);
 
