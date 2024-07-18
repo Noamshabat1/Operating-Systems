@@ -343,7 +343,7 @@ bool VirtualMemoryManager::didComeFromTheSamePath(word_t frame, const word_t par
  * Reset a frame in the virtual memory
  * @param frame the frame to reset
  */
-void VirtualMemoryManager::resetFrame(word_t frame) {
+void VirtualMemoryManager::clearFrame(word_t frame) {
     for (int i = 0; i < PAGE_SIZE; ++i) {
         PMwrite(frame * PAGE_SIZE + i, 0);
     }
