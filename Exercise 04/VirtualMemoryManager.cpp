@@ -82,7 +82,7 @@ word_t VirtualMemoryManager::manageMemory(uint64_t virtualAddress, int depth) {
  * @param addr the address of the frame
  * @param parents the parents of the frame
  */
-void VirtualMemoryManager::treeTraveling(uint64_t virtualAddress, int depth, word_t &addr,
+void VirtualMemoryManager::traversePageTable(uint64_t virtualAddress, int depth, word_t &addr,
                                          word_t parents[TABLES_DEPTH]) {
     uint64_t currentPage = virtualAddress >> OFFSET_WIDTH;
 
