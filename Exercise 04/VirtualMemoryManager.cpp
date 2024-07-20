@@ -177,7 +177,7 @@ parentFrames[TABLES_DEPTH]) {
  * @param page The page to get the frame for.
  * @return The address of the frame.
  */
-word_t VirtualMemoryManager::resolveFrameAddress(word_t page) { // TODO - new instead of getFrameByPage
+word_t VirtualMemoryManager::resolveFrameAddress(word_t page) {
     word_t frameAddress = 0;
 
     // Traverse the page table hierarchy to locate the frame
@@ -250,7 +250,7 @@ word_t VirtualMemoryManager::findUnusedFrame() {
  * @param currentDepth The current depth of the tables.
  * @return The maximum frame value seen.
  */
-word_t VirtualMemoryManager::getMaxFrameValue(word_t startFrame, unsigned int currentDepth) { // TODO - new
+word_t VirtualMemoryManager::getMaxFrameValue(word_t startFrame, unsigned int currentDepth) {
     if (currentDepth >= TABLES_DEPTH) { return FAILURE; }
 
     word_t maxFrameValue = 0;
