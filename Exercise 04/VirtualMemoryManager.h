@@ -39,10 +39,10 @@ private:
     word_t getMaxCyclicalDistance(word_t frame, unsigned int depth, const word_t parentFrames[TABLES_DEPTH],
                                   uint64_t page, word_t currP, word_t *bestP);
 
-    void traversePageTable(uint64_t virtualAddress, unsigned int depth, word_t &addr, word_t
+    void traversePageTable(uint64_t virtualAddress, unsigned int depth, word_t &address, word_t
     parentFrames[TABLES_DEPTH]);
 
-    word_t handlePageFault(word_t prevAddr, uint64_t innerOffset, uint64_t currentPage, unsigned int
+    word_t handlePageFault(word_t prevAddress, uint64_t innerOffset, uint64_t currPage, unsigned int
     depth, word_t parentFrames[TABLES_DEPTH]);
 
     void findMaxFrameRecursive(word_t frame, unsigned int depth, word_t &maxFrameValue);
@@ -61,22 +61,23 @@ private:
 
     static void clearFrame(word_t frame);
 
-    static word_t readFrame(word_t addr, uint64_t offset);
+    static word_t readFrame(word_t address, uint64_t offset);
 
-    static void writeFrame(word_t addr, uint64_t offset, word_t value);
+    static void writeFrame(word_t address, uint64_t offset, word_t value);
 
-    static uint64_t extractPageIndex(word_t page, unsigned int level);
+    static uint64_t extractPageIndex(uint64_t page, unsigned int depth, unsigned int level);
 
     static uint64_t calculateInnerOffset(uint64_t pageIndex);
 
     static word_t resolveFrameAddress(word_t page);
 
-    static word_t fetchNextFrameAddress(word_t currentAddr, word_t page, unsigned int level);
+    static word_t fetchNextFrameAddress(word_t currentAddress, word_t page, unsigned int level);
 
     static word_t computeDistance(word_t currentPage, const word_t parentFrames[TABLES_DEPTH], word_t
     swappedPage, word_t *optimalPage);
 
     static bool frameIsEmpty(word_t frame);
+
 
 };
 
