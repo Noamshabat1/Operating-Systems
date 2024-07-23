@@ -1,5 +1,5 @@
 //
-// Created by noams on 7/13/2024.
+// Created by noams on 7/23/2024.
 //
 
 #include "VirtualMemory.h"
@@ -229,11 +229,8 @@ word_t FrameManager::findUnusedFrame() {
     word_t nextAvailableFrame = maxFrameValue + 1;
 
     // Check if the next available frame is within the allowed range of frames
-    if (nextAvailableFrame < NUM_FRAMES) {
-        return nextAvailableFrame;
-    } else {
-        return INVALID;
-    }
+    if (nextAvailableFrame < NUM_FRAMES) { return nextAvailableFrame; }
+    else { return INVALID; }
 }
 
 /**
@@ -375,6 +372,16 @@ bool FrameManager::isFrameInUseRecEng(word_t startFrame, word_t targetFrame, uns
     return false;
 }
 
+/**
+ * Determine if the target frame is a leaf node.
+ * @param currentDepth The current depth of the tables.
+ * @return true if the target frame is a leaf node, false otherwise.
+ */
+bool FrameManager::isLeaf(unsigned int currentDepth) {
+    if (currentDepth == TABLES_DEPTH - 1) { return true; }
+    else { return false; }
+}
+
 // -------------------------- Utility Functions ----------------------------- //
 
 /**
@@ -468,17 +475,4 @@ uint64_t extractPageIndex(uint64_t page, unsigned int depth, unsigned int level)
  */
 uint64_t calculateInnerOffset(uint64_t pageIndex) {
     return pageIndex & (PAGE_SIZE - 1);
-}
-
-/**
- * Determine if the target frame is a leaf node.
- * @param currentDepth The current depth of the tables.
- * @return true if the target frame is a leaf node, false otherwise.
- */
-bool FrameManager::isLeaf(unsigned int currentDepth) {
-    if (currentDepth == TABLES_DEPTH - 1) {
-        return true;
-    } else {
-        return false;
-    }
 }
