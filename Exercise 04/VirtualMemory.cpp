@@ -46,7 +46,7 @@ static word_t fetchNextFrameAddress(word_t currentAddress, unsigned int level, w
 static word_t computeDistance(const word_t parentFrames[TABLES_DEPTH], word_t currentPage, word_t swappedPage, word_t *optimalPage);
 
 
-// -------------------------- implementation ----------------------------- //
+// -------------------------- Virtual Memory Functions ----------------------------- //
 
 /**
  * Initialize the virtual memory
@@ -87,7 +87,7 @@ word_t VMwrite(uint64_t virtualAddress, word_t value) {
     return SUCCESS;
 }
 
-// -------------------------- VirtualMemoryManager-logic ----------------------------- //
+// -------------------------- Page Table Manager ----------------------------- //
 
 /**
  * Manage the memory for a given virtual address
@@ -159,6 +159,8 @@ word_t PageTableManager::handlePageFault(word_t prevAddress, uint64_t innerOffse
     return frame;
 }
 
+// -------------------------- Frame Manager ----------------------------- //
+
 /**
  * Find a frame to use in the virtual memory
  * @param parentFrames the ancestors of the frame
@@ -201,40 +203,6 @@ word_t FrameManager::findAvailableFrame(const word_t parentFrames[TABLES_DEPTH])
         ++frame;
     }
     return INVALID;
-}
-
-/**
- * Get the frame by a given page.
- * @param page The page to get the frame for.
- * @return The address of the frame.
- */
-word_t resolveFrameAddress(word_t page) {
-    word_t frameAddress = 0;
-
-    // Traverse the page table hierarchy to locate the frame
-    for (unsigned int level = 0; level < TABLES_DEPTH; ++level) {
-        frameAddress = fetchNextFrameAddress(frameAddress, level, page);
-    }
-    return frameAddress;
-}
-
-/**
- * Fetch the next frame address in the page table hierarchy.
- * @param currentAddress The current address in the hierarchy.
- * @param level The current depth level in the hierarchy.
- * @param page The page number being translated.
- * @return The address of the next frame.
- */
-word_t fetchNextFrameAddress(word_t currentAddress, unsigned int level, word_t page) {
-    // Compute the page index and offset at the current depth
-    unsigned int leafDepth = TABLES_DEPTH - 1;
-    uint64_t pageIndex = extractPageIndex(page, leafDepth, level);
-    uint64_t offset = calculateInnerOffset(pageIndex);
-
-    // Read the next frame address from physical memory
-    word_t nextAddress = readFrame(currentAddress, offset);
-
-    return nextAddress;
 }
 
 /**
@@ -343,65 +311,6 @@ word_t FrameManager::getMaxCyclicalDistance(const word_t parentFrames[TABLES_DEP
 }
 
 /**
- * Compute the cyclical distance for a given page.
- * @param parentFrames The parents of the frame.
- * @param currentPage The current page.
- * @param swappedPage The page that was swapped in.
- * @param optimalPage The best page.
- * @return The cyclical distance.
- */
-word_t computeDistance(const word_t parentFrames[TABLES_DEPTH], word_t currentPage, word_t swappedPage, word_t *optimalPage) {
-    if (FrameManager::didComeFromTheSamePath(parentFrames, resolveFrameAddress(currentPage))) { return FAILURE; }
-    *optimalPage = currentPage;
-    int distance1 = NUM_PAGES - std::abs(swappedPage - currentPage);
-    int distance2 = std::abs(swappedPage - currentPage);
-    return (distance1 < distance2) ? distance1 : distance2;
-}
-
-/**
- * Read a frame from the virtual memory
- * @param address the address of the frame
- * @param offset the offset of the frame
- * @return the value of the frame
- */
-word_t readFrame(word_t address, uint64_t offset) {
-    word_t value;
-    PMread(address * PAGE_SIZE + offset, &value);
-    return value;
-}
-
-/**
- * Write a frame to the virtual memory
- * @param address the address of the frame
- * @param offset the offset of the frame
- * @param value the value of the frame
- */
-void writeFrame(word_t address, uint64_t offset, word_t value) {
-    PMwrite(address * PAGE_SIZE + offset, value);
-}
-
-/**
- * Extract the index for the current level from the page number.
- * @param page the page number.
- * @param depth the depth of the tables.
- * @param level the current level in the page table hierarchy.
- * @return the index for the current level.
- */
-uint64_t extractPageIndex(uint64_t page, unsigned int depth, unsigned int level) {
-    int shiftAmount = OFFSET_WIDTH * (depth - level);
-    return page >> shiftAmount;
-}
-
-/**
- * Calculate the offset within the page table entry.
- * @param pageIndex the page index for the current level.
- * @return the inner offset within the page table entry.
- */
-uint64_t calculateInnerOffset(uint64_t pageIndex) {
-    return pageIndex & (PAGE_SIZE - 1);
-}
-
-/**
  * Check if a frame came from the same path
  * @param parentFrames the parentFrames of the frame
  * @param frame the frame to check
@@ -464,6 +373,101 @@ bool FrameManager::isFrameInUseRecEng(word_t startFrame, word_t targetFrame, uns
         ++entry;
     }
     return false;
+}
+
+// -------------------------- Utility Functions ----------------------------- //
+
+/**
+ * Get the frame by a given page.
+ * @param page The page to get the frame for.
+ * @return The address of the frame.
+ */
+word_t resolveFrameAddress(word_t page) {
+    word_t frameAddress = 0;
+
+    // Traverse the page table hierarchy to locate the frame
+    for (unsigned int level = 0; level < TABLES_DEPTH; ++level) {
+        frameAddress = fetchNextFrameAddress(frameAddress, level, page);
+    }
+    return frameAddress;
+}
+
+/**
+ * Fetch the next frame address in the page table hierarchy.
+ * @param currentAddress The current address in the hierarchy.
+ * @param level The current depth level in the hierarchy.
+ * @param page The page number being translated.
+ * @return The address of the next frame.
+ */
+word_t fetchNextFrameAddress(word_t currentAddress, unsigned int level, word_t page) {
+    // Compute the page index and offset at the current depth
+    unsigned int leafDepth = TABLES_DEPTH - 1;
+    uint64_t pageIndex = extractPageIndex(page, leafDepth, level);
+    uint64_t offset = calculateInnerOffset(pageIndex);
+
+    // Read the next frame address from physical memory
+    word_t nextAddress = readFrame(currentAddress, offset);
+
+    return nextAddress;
+}
+
+/**
+ * Compute the cyclical distance for a given page.
+ * @param parentFrames The parents of the frame.
+ * @param currentPage The current page.
+ * @param swappedPage The page that was swapped in.
+ * @param optimalPage The best page.
+ * @return The cyclical distance.
+ */
+word_t computeDistance(const word_t parentFrames[TABLES_DEPTH], word_t currentPage, word_t swappedPage, word_t *optimalPage) {
+    if (FrameManager::didComeFromTheSamePath(parentFrames, resolveFrameAddress(currentPage))) { return FAILURE; }
+    *optimalPage = currentPage;
+    int distance1 = NUM_PAGES - std::abs(swappedPage - currentPage);
+    int distance2 = std::abs(swappedPage - currentPage);
+    return (distance1 < distance2) ? distance1 : distance2;
+}
+
+/**
+ * Read a frame from the virtual memory
+ * @param address the address of the frame
+ * @param offset the offset of the frame
+ * @return the value of the frame
+ */
+word_t readFrame(word_t address, uint64_t offset) {
+    word_t value;
+    PMread(address * PAGE_SIZE + offset, &value);
+    return value;
+}
+
+/**
+ * Write a frame to the virtual memory
+ * @param address the address of the frame
+ * @param offset the offset of the frame
+ * @param value the value of the frame
+ */
+void writeFrame(word_t address, uint64_t offset, word_t value) {
+    PMwrite(address * PAGE_SIZE + offset, value);
+}
+
+/**
+ * Extract the index for the current level from the page number.
+ * @param page the page number.
+ * @param depth the depth of the tables.
+ * @param level the current level in the page table hierarchy.
+ * @return the index for the current level.
+ */
+uint64_t extractPageIndex(uint64_t page, unsigned int depth, unsigned int level) {
+    int shiftAmount = OFFSET_WIDTH * (depth - level);
+    return page >> shiftAmount;
+}
+
+/**
+ * Calculate the offset within the page table entry.
+ * @param pageIndex the page index for the current level.
+ * @return the inner offset within the page table entry.
+ */
+uint64_t calculateInnerOffset(uint64_t pageIndex) {
+    return pageIndex & (PAGE_SIZE - 1);
 }
 
 /**
