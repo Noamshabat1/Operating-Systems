@@ -23,10 +23,10 @@ public:
     static void clearFrame(word_t frame);
     static bool checkIfFrameIsEmpty(word_t frame);
     static bool didComeFromTheSamePath(const word_t parentFrames[TABLES_DEPTH], word_t frame);
+    static bool isLeaf(unsigned int currentDepth);
 
 private:
     static void findMaxFrameValue(word_t frame, word_t &maxFrameValue, unsigned int depth);
-    static bool isLeaf(unsigned int currentDepth);
 };
 
 class PageTableManager {
@@ -152,7 +152,7 @@ word_t PageTableManager::handlePageFault(word_t prevAddress, uint64_t innerOffse
     if (depth < TABLES_DEPTH - 1) {
         FrameManager::clearFrame(frame);
         return frame;
-    } else if (depth == TABLES_DEPTH - 1) {
+    } else if (FrameManager::isLeaf(depth)) {
         PMrestore(frame, currPage);
         return frame;
     }
