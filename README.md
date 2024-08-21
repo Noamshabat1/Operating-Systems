@@ -8,7 +8,7 @@
     <br>
     This is a course that teaches you about operating systems, hardware and software integration, memory management, threads and scheduling, using <b>C++</b> as the main language.
     <br>
-    It lasted <b>13 weeks</b>, in which, we've submitted a total of 4 exercises in various fields and topics.
+    It lasted <b>12 weeks</b>, in which, we've submitted a total of 4 exercises in various fields and topics.
     <br>
     <br>
     More information can be found <a href="https://shnaton.huji.ac.il/index.php/NewSyl/67808/2/2022/">Here</a>.
